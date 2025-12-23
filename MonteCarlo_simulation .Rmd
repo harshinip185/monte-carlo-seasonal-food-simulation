@@ -1,0 +1,524 @@
+---
+title: "Seasonal Food Location Changes"
+author:
+  - "Malik Prentice"
+  - "Harshini Praveen Kumar"
+  - "Marjan Karami"
+  - "Parastoo Jargoie"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+date: "2024-01-26"
+---
+
+
+# Abstract
+This paper introduces a Monte Carlo simulation model designed to explore the intricate dynamics of lady beetle societies under the influence of seasonal fluctuations in food source locations. The simulation intricately incorporates dynamic variations in the availability and positioning of food sources, changes in the size of the habitat's lake, and alterations in landscape features. The primary objective of this study is to gain insights into how these multifaceted factors collectively shape the population and behavioral patterns of lady beetles within a specific ecological context. The simulation serves as a tool to unravel the complex interplay between seasonal ecological dynamics and lady beetle societal structures, contributing to a more nuanced understanding of ecosystem intricacies.
+
+# Introduction
+Montecarlo simulations are the powerful scientific tools that help us explore complex systems. In the world of ecology, these simulations are handy for studying how animals behave in their environments. Our paper uses Monte Carlo simulations to look into a specific ecological puzzle-"how ladybugs' lives are affected by changes in the food source locations",thereby offering valuable insights into how lady beetle populations adapt to these fluctuations.
+
+The idea of Monte Carlo simulations comes from the world of probability and statistics, these simulations have been handy in modeling everything from how predators and prey interact to understanding the spread of diseases.For instance,within examinations of forest ecosystems, researchers have employed Monte Carlo simulations to simulate the patterns of tree growth in response to shifting environmental conditions. This approach has yielded valuable insights into the ability of these ecosystems to withstand changes and adapt to new environmental circumstances. 
+
+Our interest in this study stems from wanting to understand the complex relationship between nature's changes and lives of insects. We are specifically creating an artificial society of lady beetles. Why? Because we think that using a Monte Carlo simulation can help us mimic the nuanced seasonal variations in food source locations, offering valuable insights into the adaptive responses of lady beetle populations to these fluctuations.
+
+The focus of our study extends beyond just how food moves around for lady beetles. We are also looking at how the lake's size changes and how the landscape shifts. All these things together set the stage for how lady beetle communities operate.
+
+Our main goal with this simulation is to carefully uncover the complex connections that influence both the population size an behaviours of lady beetles as they respond to the changing locations of their food throughout the seasons. By doing this, we are not only getting grasp of how ecosystems work in detail but also gaining insights into what it means for insects societies, especially in the environment that are always changing.
+
+# Data and Methods
+In conducting our simulation, we carefully designed how data is generated to accurately reflect our ecological model. This section breaks down the crucial components, namely the agents(beetles),food sources and the landscape.
+
+***Agents(Beetles):***
+For the lady beetles, we started by setting their initial numbers and outlining their behaviours in our simulated environment. We kickstarted the population and used a probabilistic model to mimic how lady beetles reproduce and move around. These dynamic factors played a pivotal role in modeling how the lady beetle society grows and spreads across 106 simulation iterations.
+
+***Food sources:***
+To mimic the seasonal shifts in where lady beetles find food, we introduced dynamic changes in the availability and positions of food sources. The simulations considered parameters that represented how appealing and accessible different locations were for lady beetles to locate food. This approach allowed us to explore how the lady beetle population reacts when their primary food sources move around.
+
+***Landscape:***
+Changes in the size of the lake habitat and adjustments in landscape features were vital aspects of our simulation.The lake size varied with the seasons, affecting the space available for lady beetles activities.Together, these features created the background against which the lady beetle society unfolded.
+
+Our aim in integrating these data generation properties was to craft a realistic portrayal of an artificial lady beetle society within a dynamic ecological setting. We carefully chose parameters that align with ecological principles, ensuring a thorough exploration of the intricate dynamics governing lady beetle populations in response to seasonal changes in food locations.
+
+```{r setup, label=libload,echo=FALSE,results="hide", include=FALSE}
+knitr::opts_chunk$set(fig.cap = NULL)
+ # just load some libraries
+library(knitr)
+library(lattice)
+library(plotrix)
+library(vcd,quietly=TRUE)
+source('BeeSim.r')
+```
+
+# Statistical Analysis 
+In analyzing our simulation study, we utilized R(version 4.3.2 (2023-10-31 ucrt))as the programming environment,employing dedicated packages to aid in manipulation and visualization. The subsequent table outlines the techniques and features of the R environment applied in this research:
+
+```{r echo=FALSE, results='markup'}
+
+
+r_version <- "R version 4.3.2 (2023-10-31 ucrt)"
+packages_used <- c("knitr", "lattice","plotrix","vcd")
+simulation_iterations <- 53
+
+
+r_environment_table <- data.frame(
+  "R Environment Attributes" = c("R Version", "Packages Used", "Simulation Iterations"),
+  "Values" = c(r_version, paste(packages_used, collapse = ", "), simulation_iterations)
+)
+
+knitr::kable(r_environment_table, format = "markdown")
+#print(r_environment_table)
+
+```
+
+```{r echo=FALSE, include=FALSE}
+
+library(plotrix) ### for draw.ellipse, draw.circle
+BeeSim = new.env()
+BeeSim$new <- function (n) {
+    self=BeeSim
+    self$beetles=data.frame(x=runif(n,min=0,max=50),
+                            y=runif(n,min=0,max=50),
+                            sex=c("F","M")[rbinom(n,1,p=0.5)+1],
+                            color=c("red","orange")[rbinom(n,1,p=c(0.8,0.2))+1],
+                            points=sample(4:7,n,replace=TRUE),
+                            age=sample(0:5,n,replace=TRUE),
+                            energy=rep(10,n))
+    self$food=data.frame(x=c(rnorm(10,mean=12,sd=5),rnorm(20,mean=42,sd=5),runif(20,0,50)),
+                         y=c(rnorm(10,mean=12,sd=5),rnorm(20,mean=42,sd=5),runif(20,0,50)),
+                         age=rep(0,50))
+    self$monitor=data.frame(iter=0,beetles=nrow(self$beetles),food=nrow(self$food))
+    self$food_angle=0
+    self$tree_angle=0
+}
+### Draw an individual beetle of the beetles data frame 
+### Private Function
+BeeSim$.drawBeetle <- function (i,min.age=10) {
+    self=BeeSim
+     ## draw the ith beetle from the beetles data frame
+     rad2deg <- function(rad) {(rad * 180) / (pi)}
+     deg2rad <- function(deg) {(deg * pi) / (180)}
+     draw.beetle = function (x,y,a=1.5,b=2,sex='F',
+                                col='red',points=7) {
+        draw.ellipse(x,y,a=a,b=b,col=col)
+        for (i in 1:points) {
+            t=deg2rad((360/points)*i)
+            xp = a*cos(t)*0.75 + x;
+            yp = b*sin(t)*0.75 + y;
+            points(xp,yp,col='black',pch=19,cex=1)
+        }
+        if (sex=="M") {
+            points(x,y,pch=19,cex=1,col=4)
+        }
+
+     }
+     ## extract the data for the ith beetle and plot
+     if (self$beetles$age[i]<min.age) {
+         # baby beetles, just points
+         points(self$beetles[i,'x'],self$beetles[i,'y'],col=self$beetles[i,'color'],pch=19,cex=1.5)
+     } else {
+         col=self$beetles[i,'color']
+         if (self$beetles$energy[i] <= 10) {
+             # not enough energy for mating make them pale
+             if (col=="orange") {
+                 col="#ffcc99"
+             } else {
+                 col="#ff6666"
+             }
+         }
+         draw.beetle(x=self$beetles[i,'x'],
+                     y=self$beetles[i,'y'],
+                     sex=self$beetles[i,'sex'],
+                     col=col,
+                     points=self$beetles[i,'points'])
+     }
+}
+
+
+BeeSim$drawLandscape <- function () {
+    self=BeeSim
+    plot(1, type="n", xlim=c(0,50), ylim=c(0,50), asp=1, xlab="", ylab="")
+
+    # dynamic lake range
+    season_info = self$seasonality(nrow(self$monitor))
+    lake_size = season_info$lake_size
+    draw.circle(25, 25, lake_size, col="skyblue")
+
+    # moving trees per iteration (aprox 10 degree)
+    rad = pi * self$tree_angle / 180    # Umrechnung in Bogenmaß
+    
+    calculateTreeCoords <- function(x, y) {
+        x_center = 25
+        y_center = 25
+        dx = x - x_center
+        dy = y - y_center
+        new_x = cos(rad) * dx - sin(rad) * dy + x_center
+        new_y = sin(rad) * dx + cos(rad) * dy + y_center
+        return(c(new_x, new_y))
+    }
+
+    tree_coords = list(c(10, 10), c(12, 12), c(14, 10), c(38, 38), 
+                       c(40, 40), c(42, 38), c(44, 40), c(46, 38))
+    tree_coords = lapply(tree_coords, function(coords) calculateTreeCoords(coords[1], coords[2]))
+
+    drawTree <- function (x, y) {
+        polygon(x=c(-0.5, 0.5, 0.5, 1.5, 0, -1.5, -0.5) + x, y=c(0, 0, 1, 1, 3, 1, 1) + y, col="green")
+    }
+    
+    # drawing trees
+    for (coords in tree_coords) {
+        drawTree(coords[1], coords[2])
+    }
+
+    rad = pi * self$food_angle / 180
+
+    #calculate food coordinates so they move arround aswell
+    calculateFoodCoords <- function(x, y) {
+        x_center = 25
+        y_center = 25
+        dx = x - x_center
+        dy = y - y_center
+        new_x = cos(rad) * dx - sin(rad) * dy + x_center
+        new_y = sin(rad) * dx + cos(rad) * dy + y_center
+        return(c(new_x, new_y))
+    }
+
+    updated_food = t(apply(self$food[, c("x", "y")], 1, function(coords) calculateFoodCoords(coords[1], coords[2])))
+    colnames(updated_food) <- c("x", "y") # Stellen Sie sicher, dass die Spaltennamen korrekt sind
+    self$food[, c("x", "y")] <- updated_food
+
+    # draw food places
+    points(self$food$x, self$food$y, pch=15, col="grey80")
+}
+
+
+
+BeeSim$drawBeetles <- function () {
+    self=BeeSim
+    self$drawLandscape()
+    points(self$food,pch=15,col="grey80")
+    ## loop over beetles data frame and plot them, beetle by beetle    
+    for (i in 1:nrow(BeeSim$beetles)) {
+        self$.drawBeetle(i)
+    }
+    idx=nrow(self$monitor)
+    title(sprintf("iter: %i beetles: %i food items: %i",self$monitor$iter[idx],self$monitor$beetles[idx],self$monitor$food[idx]))
+}
+
+
+
+
+BeeSim$iter <- function (sd=1,sight=2,debug=TRUE) {
+    self=BeeSim
+    ## * move randomly every beetle within the grid
+    ##   - sight x and y: mean=2,sd=1
+    ##   - create vector of x and y changes
+    x=rnorm(nrow(self$beetles),mean=0,sd=sd)
+    y=rnorm(nrow(self$beetles),mean=0,sd=sd)
+    ##   - add these values to the coordinates
+    self$beetles$x=self$beetles$x+x
+    self$beetles$y=self$beetles$y+y    
+    ##   - stay within the grid (0,50) -1 => 1 51 => 49
+    ##     idx=which(x<0)
+    idx=which(self$beetles$x<0)
+    if (length(idx)>0) {
+        self$beetles$x[idx]=abs(self$beetles$x[idx])
+    }
+    idx=which(self$beetles$x>50)
+    if (length(idx)>0) {
+        self$beetles$x[idx]=self$beetles$x[idx]-50
+    }
+    idx=which(self$beetles$y<0)
+    if (length(idx)>0) {
+        self$beetles$y[idx]=abs(self$beetles$y[idx])
+    }
+    idx=which(self$beetles$y>50)
+    if (length(idx)>0) {
+        self$beetles$y[idx]=self$beetles$y[idx]-50
+    }
+    ## * look for food dist(rbind(self$beetles[,1:2],self$food)
+    ##   -  combine food and beetles in one distance matrix
+    
+    D=as.matrix(dist(rbind(self$beetles[,1:2],self$food[,1:2])))
+    n=nrow(self$beetles)
+    for (i in 1:n) {
+        ## food distances
+        f=D[i,(n+1):ncol(D)]
+        if (any(f<sight)) {
+            ## update energy=energy+2
+            idx=sample(which(f<2),1)
+            #print(paste(i,"is eating",idx))
+            ## remove food from grid
+            ## place a value of 100 to D for this food item
+            ## so that it is not eaten again
+            D[,n+idx]=100
+            self$beetles[i,'energy']=self$beetles[i,'energy']+2
+        }
+    }
+    # Seasonal lake changing
+    season_info = self$seasonality(nrow(self$monitor))
+    current_lake_size = season_info$lake_size
+    food_amount = season_info$food_amount
+    lake_size = season_info$lake_size
+    lake_center_x = 25
+    lake_center_y = 25
+
+    #calculation for the sea so the beetles die if the touch it
+    distances_to_lake = sqrt((self$beetles$x - lake_center_x)^2 + (self$beetles$y - lake_center_y)^2)
+
+    beetles_to_keep = distances_to_lake > current_lake_size
+    self$beetles = self$beetles[beetles_to_keep, ]
+
+    ## * Update Beetles:
+    ##   - update age for all beetles: age = age +1
+    self$beetles$age=self$beetles$age+1
+    ##   - update energy for all beetles: energy = energy - 1
+    self$beetles$energy=self$beetles$energy-1
+    ##   - check energy if < 0 remove beetle from data frame
+    idx=which(self$beetles$energy>=0)
+    if (length(idx)<nrow(self$beetles)) {
+        if (debug) {
+            print(paste(nrow(self$beetles) - length(idx),"starving and dying ..."))
+        }
+        self$beetles=self$beetles[idx,]
+    }
+    #tree movement
+    weeks<- 53
+    angle_incre_tree=360/weeks    
+    self$tree_angle=(self$tree_angle+angle_incre_tree)%% 360
+    radius=20
+    radian_angle=self$tree_angle*(pi/180)
+    new_x=25 +radius*cos(radian_angle)
+    new_y=25+radius*sin(radian_angle)
+
+    #degree for food movement
+    angle_incre_food=360/weeks  # change this if the food moves faster or slower than the trees itself
+    self$food_angle=(self$food_angle+angle_incre_food)%% 360
+    radius=20
+
+    #new coordinates for food
+    radian_angle= self$food_angle*(pi/180)
+    new_x=25 +radius*cos(radian_angle)
+    new_y=25+radius*sin(radian_angle)
+    
+
+    ## Update food:
+    ## remove all items where D==100 or lower than 99
+    # remove eaten food
+    idx=which(D[1,c((n+1):ncol(D))]<99)
+    self$food=self$food[idx,]
+    ### check if beetle is in lake, if yes remove it 
+    D=as.matrix(dist(rbind(BeeSim$beetles[,1:2],data.frame(x=25,y=25))))
+    idx=which(D[ncol(D),1:(ncol(D)-1)]<3)
+    if (length(idx)>0) {
+        if (debug) {
+            print(paste(length(idx),"beetle(s) in lake, dying ..."))
+        }
+        self$beetles=self$beetles[-idx,]
+    }
+    ## remove 10% of food older than 10 iterations
+    ## TODO: No age, just 5% deleting?
+    self$food$age=self$food$age+1
+    idx=which(self$food$age>5)  # change that one to 5 so the food disappereas after 5 itterations
+    if (length(idx)>0) {
+        remove=idx[which(rbinom(length(idx),1,p=0.4)==1)]  # hier könnte ich den p wert so ändern das nicht 10% sondern mehr entfernt wird. chanes p value to 0.4 so there is not to much food lying arround
+        if (debug) {
+            print(paste("removing", length(remove),"food items ..."))
+        }
+        if (length(remove)>0) {
+            self$food=self$food[-remove,]
+        }
+        #print(paste()
+    }
+    ##   - create new food, add food items at the end of food data frame
+    newfood=data.frame(x=c(rnorm(10,mean=12,sd=5),rnorm(20,mean=42,sd=5),runif(20,0,50)),
+                       y=c(rnorm(10,mean=12,sd=5),rnorm(20,mean=42,sd=5),runif(20,0,50)),age=rep(0,50))
+    self$food=rbind(self$food,newfood)
+    ### Next: 
+    ### remove food outside of grid
+    idx=unique(c(which(self$food$x>50),which(self$food$x<0),which(self$food$y>50),which(self$food$y<0)))
+    if (length(idx)>0) {
+        self$food=self$food[-idx,]
+    }
+    # restrict food to 1000 units
+    if (nrow(self$food)>500) {
+        idx=sample(1:nrow(self$food),500)   # restricted food is now lower (before 1000) so there is not to much food
+        self$food=self$food[idx,]
+    }
+    idx=nrow(self$monitor)
+    self$monitor=rbind(self$monitor,data.frame(iter=self$monitor$iter[idx]+1,beetles=nrow(self$beetles),food=nrow(self$food)))
+    
+}
+
+
+BeeSim$mating <- function (sight=4,min.female=10,min.male=5,min.age=10,childs=5,debug=TRUE) {
+    self=BeeSim
+    candidate.female=which(self$beetles$age>min.age & self$beetles$sex=="F" & self$beetles$energy>min.female)
+    childs.df=NULL
+    if (length(candidate.female)>0) {
+        D=as.matrix(dist(rbind(BeeSim$beetles[,1:2])))
+        for (f in candidate.female) {
+            if (any(D[f,]<sight)) {
+                for (b in which(D[f,]<sight)) {
+                    if (b == f) {
+                        next
+                    }
+                    if (self$beetles$sex[b] == "M" &  self$beetles$energy[b]>min.male & self$beetles$age[b]>min.age) {
+                        if (debug) {
+                            print(paste(f,"mates prosperous",b)) 
+                        }
+                        # newborns data
+                        x=runif(childs,min=min(self$beetles[c(f,b),'x']), max=min(self$beetles[c(f,b),'x']))
+                        y=runif(childs,min=min(self$beetles[c(f,b),'y']), max=min(self$beetles[c(f,b),'y']))
+                        sex=sample(c("M","F"),childs,replace=TRUE)
+                        color=sample(self$beetles$color[c(f,b)],childs,replace=TRUE)
+                        points=sample(self$beetles$points[c(f,b)],childs,replace=TRUE)
+                        if (class(childs.df)=="NULL") {
+                            childs.df=data.frame(x=x,y=y,sex=sex,color=color,points=points,age=0,energy=1)
+                        } else {
+                            childs.df=rbind(childs.df,data.frame(x=x,y=y,sex=sex,color=color,points=points,age=0,energy=1))
+                        }
+                        # reduce energy for mating pair, females invest more, most of the energy comes from females
+                        self$beetles[f,'energy']=self$beetles[f,'energy']-(childs-1)
+                        self$beetles[b,'energy']=self$beetles[b,'energy']-1
+                        break
+                    }
+                }
+            }
+        }
+    }
+    if (class(childs.df)!="NULL") {
+        self$beetles=rbind(self$beetles,childs.df)
+    }
+    ## remix order of beetles to avoid bias for females on top of 
+    self$beetles=self$beetles[sample(1:nrow(self$beetles)),]
+}
+
+
+
+BeeSim$plotMonitor <- function () {
+    self=BeeSim
+    plot(self$monitor$food ~ self$monitor$iter,col="grey60",type="l",ylim=c(0,max(self$monitor$food)),ylab="Counts",xlab="Iterations",main="Model Monitoring",lwd=3)
+    grid()
+    
+    # Seeg  röße über Iterationen plotten
+    lake_sizes = sapply(1:nrow(self$monitor), function(iter) self$seasonality(iter)$lake_size)
+    lines(lake_sizes ~ self$monitor$iter, col="cyan", type="l", lwd=2)  # the liegth blue trend line shows the lake size
+
+    points(self$monitor$beetles ~ self$monitor$iter,col="blue",type="l",lwd=3)
+    
+}
+
+
+
+BeeSim$seasonality <- function(iter) {
+    max_food = 50   # changed from 100 to 50
+    min_food = 10
+    food_amount = round(min_food + (max_food - min_food) * (sin(2 * pi * iter / 53) + 1) / 2)
+    max_lake_size = 12 # 4 times the original radius of 3
+    min_lake_size = 3
+    lake_size = min_lake_size + (max_lake_size - min_lake_size) * (sin(2 * pi * iter / 53) + 1) / 2
+    return(list(food_amount=food_amount, lake_size=lake_size))
+}
+
+# changed the itter to 106 so we simulate 2 years 
+BeeSim$main <- function (iter=106, beetles=30, plot_every=10, pdf=FALSE) {
+    
+    
+    BeeSim$new(beetles)
+    
+   
+    total_plots = length(c(1, seq(plot_every, iter, by=plot_every), iter))
+    par(mfrow=c(ceiling(total_plots / 2), 2))
+
+    for (i in 1:iter) {
+        BeeSim$iter()
+        BeeSim$mating()
+
+        
+        if (i == 1 || i %% plot_every == 0 || i == iter) {
+            BeeSim$drawBeetles()
+            Sys.sleep(0.2)
+        }
+    }
+    
+    BeeSim$plotMonitor()
+    
+
+
+}
+
+
+```
+
+
+
+# Results
+```{r  echo=FALSE , message=FALSE, warning=FALSE, results='hide', fig.width=9, fig.height=30, fig.align='center',}
+knitr::opts_chunk$set(fig.cap=NULL)
+set.seed(123)
+par(mfrow=c(2,2), mai=c(0.2, 0.3, 0.7, 0.3))
+BeeSim$main()
+
+
+```
+
+
+The simulation commenced with an initial population of 30 beetles, undergoing 106 iterations corresponding to approximately two year, revealing dynamic behaviors triggered by environmental shifts. In terms of behavior and traits, beetles displayed unpredictable movements within the grid, engaged in food foraging, and responded to seasonal variations, with landscape elements such as trees influencing their behavioral patterns. 
+Observable aspects included reproduction and aging, where mating was influenced by proximity, age, and energy levels, leading to increased energy investment by females in reproduction and subsequent offspring. Landscape features, encompassing seasonal variations in lake size and tree movements, affected the distribution of food sources and beetle behavior. Food sources were generated and moved corresponding to our trees 
+impacting beetle foraging, energy levels, and reproductive success.
+The simulation incorporated seasonal variations, resulting in lake size and food amounts following sinusoidal patterns, thereby influencing beetle behavior. Monitoring trends disclosed population fluctuations, correlating with alterations in food availability, mating success, and environmental factors. The simulation showcased a dynamic interplay between environmental factors and beetle population dynamics, highlighting stability and fluctuations that significantly influenced reproduction, foraging behavior, and population size. 
+Acknowledging limitations, including simplifications and assumptions, remains crucial, as the simulation may not fully capture real-world ecological complexities. The outcomes yield valuable insights into beetle population dynamics, facilitating comparisons with theoretical expectations and ecological principles to enhance our understanding of the simulated ecosystem.
+
+## Discussion
+The simulation's outcomes reveal captivating aspects of beetle population dynamics in response to environmental variables, offering valuable insights into the complex interactions within the simulated ecosystem.
+
+***Population Dynamics and Adaptability***
+
+The initial population of 30 beetles demonstrated adaptability to changing environmental conditions. Fluctuations in population size over the simulated year underscored their ability to adjust to varying food availability, mating opportunities, and cyclic environmental patterns.
+
+***Behavioral Resilience and Reproductive Strategies***
+
+Beetles exhibited resourceful survival strategies, including random movement, foraging behavior, and responsiveness to seasonal variations. The impact of landscape features, especially trees, on movement patterns emphasized the interconnections between beetles and their environment. Females investing more energy in reproduction resulted in successful mating and offspring, highlighting the importance of energy allocation in sustaining the population.
+
+***Seasonal Variations and Ecological Impacts***
+
+The simulation's inclusion of sinusoidal variations in lake size and food availability introduced a seasonal rhythm to the ecosystem. This influenced food source distribution, beetle behavior, and population dynamics, mirroring real-world scenarios where environmental changes drive species' behavior and survival strategies.
+
+***Monitoring Trends and Methodological Reflections***
+
+Monitoring trends provided valuable insights into population fluctuations and their correlation with environmental factors. 
+
+***Monte Carlo Simulations and Ecological Realism***
+
+The use of Monte Carlo simulations allowed for exploring diverse scenarios and their outcomes, aligning well with the inherent randomness in ecological systems. Reflecting on this methodology, it underscores the significance of randomness and uncertainty in ecological research, offering a more realistic representation of dynamic ecological processes.
+
+In conclusion, the discussion emphasizes the intricate interplay between environmental factors and beetle population dynamics, contributing to our understanding of ecological systems. It also underscores the importance of randomness in ecological research, particularly through the lens of Monte Carlo simulations.
+
+## Conclusion
+In summary, the simulation study significantly advances our comprehension of beetle population dynamics by illuminating crucial aspects, including behavioral adaptations, reproductive strategies, and the impact of seasonal variations on ecological outcomes. The insights garnered from this research bear substantial relevance for the wider field of ecology. By clarifying the intricate interactions between beetles and their environment, the study not only propels our understanding of specific species but also imparts valuable knowledge applicable to a variety of ecological scenarios. These discoveries establish a groundwork for forthcoming investigations, providing a guide for researchers to delve further into the intricacies of dynamic ecosystems. Ultimately, this research has the potential to propel progress in ecological science by offering nuanced insights into the factors influencing population dynamics and ecological relationships.
+
+## References
+(1) R Core Team (2022). R: A language and environment for statistical computing. R Foundation for     Statistical Computing, Vienna, Austria. URL https://www.R-project.org/.
+
+(2) Lemon, J. (2006). Plotrix: a package in the red light district of R. R-News, 6(4), 8–12. URL https://cran.r-project.org/web/packages/plotrix/citation.html.
+
+(3) Hermanussen, M., Aßmann, C. & Groth, D. Monte Carlo simulation of body height in a spatial network. Eur J Clin Nutr 70, 671–678 (2016). https://doi.org/10.1038/ejcn.2016.45
+
+(4) Adrianna C. Foster, Jacquelyn K. Shuman, Herman H. Shugart, Jose Negron. Modeling the interactive effects of spruce beetle infestation and climate on subalpine vegetation. 05 October 2018 https://doi.org/10.1002/ecs2.2437
+
+
+***Citations***
+
+R Core Team (2022). R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria.
+URL https://www.R-project.org/.
+
+Xie Y (2023). knitr: A General-Purpose Package for Dynamic Report Generation in R. R package version 1.45, https://yihui.org/knitr/.
+
+Sarkar D (2008). Lattice: Multivariate Data Visualization with R. Springer, New York. ISBN 978-0-387-75968-5, http://lmdvr.r-forge.r-project.org.
+
+plotrix:https://github.com/dmurdoch/plotrix
+
+Meyer D, Zeileis A, Hornik K, Friendly M (2023). vcd: Visualizing Categorical Data. R package version 1.4-12, https://CRAN.R-project.org/package=vcd.
+
