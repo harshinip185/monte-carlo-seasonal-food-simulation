@@ -26,10 +26,3 @@ The work presented here focuses specifically on:
 - `MonteCarlo_simulation.Rmd` — reproducible simulation and analysis
 - `MonteCarlo_simulation.pdf` — rendered report with results and visualizations
 
-## Contributors
-My primary contribution focused on seasonal food location dynamics and habitat variation.
-- Harshini Praveen Kumar
-- Malik Prentice
-- Marjan Karami
-- Parastoo Jargoie
-
