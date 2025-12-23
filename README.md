@@ -18,6 +18,7 @@ The work presented here focuses specifically on:
 - Visualization and monitoring of spatial dynamics
 
 ## Methods & Tools
+The simulation and all analyses were developed and executed in R, with visualization and reporting handled through reproducible R Markdown workflows.
 - Monte Carlo simulation
 - R
 - knitr, lattice, plotrix, vcd
