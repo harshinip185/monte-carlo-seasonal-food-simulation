@@ -23,9 +23,6 @@ The work presented here focuses specifically on:
 - knitr, lattice, plotrix, vcd
 
 ## Repository Contents
-- `Monte_Carlo_simulation.Rmd` — reproducible simulation and analysis
-- `Monte_Carlo_simulation.pdf` — rendered report with results and visualizations
+- `MonteCarlo_simulation.Rmd` — reproducible simulation and analysis
+- `MonteCarlo_simulation.pdf` — rendered report with results and visualizations
 
-## Notes
-This project does not include modeling of predators, infectious agents, genetics,
-mating competition, or seasonal changes in food quantity.
